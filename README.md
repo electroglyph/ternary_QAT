@@ -2,7 +2,7 @@
 
 Lightweight ternary QAT for [Ternary-Bonsai](https://huggingface.co/models?search=unpacked%20ternary) unpacked text models.
 
-Qwen 3.5 is untested right now!
+Qwen 3.5 is currently being tested.
 
 This is designed from the start to be Unsloth compatible.
 
