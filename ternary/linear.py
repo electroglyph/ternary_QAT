@@ -36,7 +36,7 @@ class TernaryLinear(nn.Linear):
 
     def __init__(self, weight, bias=None, group_size=GROUP_SIZE):
         super().__init__(weight.shape[1], weight.shape[0], bias is not None)
-        self.weight = nn.Parameter(weight.detach().clone())  # keep native dtype
+        self.weight = nn.Parameter(weight.detach())  # reuse storage; no clone
         if bias is not None:
             self.bias = nn.Parameter(bias.detach().clone())
         self.group_size = group_size

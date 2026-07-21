@@ -12,7 +12,7 @@ class TernaryEmbedding(nn.Embedding):
 
     def __init__(self, weight, group_size=GROUP_SIZE):
         super().__init__(weight.shape[0], weight.shape[1])
-        self.weight = nn.Parameter(weight.detach().clone())
+        self.weight = nn.Parameter(weight.detach())
         self.group_size = group_size
 
     def forward(self, x):
@@ -61,11 +61,8 @@ def swap_linear(model, cfg=None):
                 setattr(mod, child_name, TernaryEmbedding(child.weight, gs))
             elif _should_swap(full, child):
                 setattr(mod, child_name, TernaryLinear(child.weight, getattr(child, "bias", None), gs))
-    # tied weights — re-share the Parameter object that .clone()
-    # in TernaryEmbedding/TernaryLinear just broke. Without this, save_pretrained
-    # writes two divergent tensors with tie_word_embeddings=True and from_pretrained
-    # refuses to retie (printed warning, silent untie). Point lm_head.weight at the
-    # embed Parameter; embed is the canonical owner in HF's tie_weights.
+    # tied weights — re-share the Parameter object (aliased by design — the
+    # old nn.Linear/nn.Embedding is replaced by setattr, no stale holder).
     if tied:
         new_embed = getattr(getattr(model, "model", model), "embed_tokens", None)
         new_head = getattr(model, "lm_head", None)
