@@ -2,6 +2,8 @@
 
 Lightweight ternary QAT for [Ternary-Bonsai](https://huggingface.co/models?search=unpacked%20ternary) unpacked text models.
 
+Qwen 3.5 is untested right now!
+
 This is designed from the start to be Unsloth compatible.
 
 Weights are ternarized to `{-1, 0, 1}` per group of (128/64/user-defined) consecutive weights along the last dim, matching the Bonsai on-disk format (verified bit-exact). Embeddings + all `nn.Linear` modules (attn, MLP, lm_head) are ternarized; norms stay FP.

@@ -16,15 +16,19 @@ class TernaryEmbedding(nn.Embedding):
         self.group_size = group_size
 
     def forward(self, x):
-        # x is int64 indices; weight stays FP — embedding is a gather, not a matmul
-        w_q = ternarize_weight(self.weight, self.group_size)
+        # x is int64 indices; embedding is a gather, not a matmul — never cast
+        # weight to x.dtype (int64). Cast only if a float input slips through.
+        w_q = ternarize_weight(self.weight, self.group_size).to(x.dtype) \
+            if x.is_floating_point() else ternarize_weight(self.weight, self.group_size)
         return torch.nn.functional.embedding(
             x, w_q, self.padding_idx, self.max_norm,
             self.norm_type, self.scale_grad_by_freq, self.sparse)
 
 
-# don't ternarize norms (tiny, paper keeps them FP)
-_EXCLUDE_SUBSTR = ("norm", "q_norm", "k_norm")
+# don't ternarize norms (tiny, paper keeps them FP).
+# in_proj_b/a: GatedDeltaNet gating scalars (one row per value head) —
+# ternarizing destroys the SSM recurrence gate.
+_EXCLUDE_SUBSTR = ("norm", "q_norm", "k_norm", "in_proj_b", "in_proj_a")
 
 
 def _should_swap(name, mod):
@@ -38,6 +42,9 @@ def swap_linear(model, cfg=None):
     TernaryEmbedding, per the Bonsai paper (embeddings, attn, MLP, lm_head
     all ternary; norms stay FP). group_size from cfg (128 paper, 64 finer).
     Mutates model in place; call before building the optimizer / Trainer.
+
+    Multimodal (Qwen3_5, Qwen3-VL, ...): vision tower auto-skipped by name
+    (any module whose path contains 'visual'). Text-only ternarization.
     """
     gs = getattr(cfg, "group_size", GROUP_SIZE) if cfg else GROUP_SIZE
     embed_node = getattr(getattr(model, "model", model), "embed_tokens", None)
@@ -45,6 +52,8 @@ def swap_linear(model, cfg=None):
     tied = (embed_node is not None and head_node is not None
             and embed_node.weight.data_ptr() == head_node.weight.data_ptr())
     for name, mod in list(model.named_modules()):
+        if "visual" in name.split("."):
+            continue  # vision tower stays FP
         for child_name, child in list(mod.named_children()):
             full = f"{name}.{child_name}" if name else child_name
             if isinstance(child, nn.Embedding) and not isinstance(child, TernaryEmbedding) \
