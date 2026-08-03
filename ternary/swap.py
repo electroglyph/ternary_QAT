@@ -26,12 +26,7 @@ class TernaryEmbedding(nn.Embedding):
 
 
 # don't ternarize norms (tiny, paper keeps them FP).
-# in_proj_b/a: GatedDeltaNet gating scalars (one row per value head) —
-# ternarizing destroys the SSM recurrence gate.
-# in_proj_qkv, in_proj_z, out_proj: SSM projection matrices — the
-# GatedDeltaNet recurrence compounds fp error; keep these FP.
-_EXCLUDE_SUBSTR = ("norm", "q_norm", "k_norm", "in_proj_b", "in_proj_a",
-                   "in_proj_qkv", "in_proj_z", "out_proj")
+_EXCLUDE_SUBSTR = ("norm", "q_norm", "k_norm")
 
 
 def _should_swap(name, mod):
