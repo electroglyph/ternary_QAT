@@ -13,10 +13,18 @@ def ternarize_weight(w, group_size=GROUP_SIZE):
     g128 group, w/alpha rounds exactly to {-1,0,1}). Last dim must divide
     evenly by group_size (2048, 1024, 6144 all do; embeddings 2048 too).
     alpha is detached. STE applies to the round_clamp. Returns w_q, same
-    shape as w.
+    shape as w. Raises ValueError on a bad shape/group_size.
     """
     K = group_size
     shape = w.shape
+    if not isinstance(K, int) or K <= 0:
+        raise ValueError(f"group_size must be a positive int, got {group_size!r}")
+    if w.ndim == 0:
+        raise ValueError(f"ternarize_weight needs ndim>=1, got shape {tuple(shape)}")
+    if shape[-1] % K:
+        raise ValueError(
+            f"last dim {shape[-1]} must divide evenly by group_size {K} "
+            f"(shape {tuple(shape)})")
     wg = w.reshape(*shape[:-1], shape[-1] // K, K)
     with torch.no_grad():
         a = wg.abs().amax(dim=-1, keepdim=True).clamp(min=1e-8)

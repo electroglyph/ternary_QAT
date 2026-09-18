@@ -6,7 +6,7 @@ Qwen 3.5 is currently being tested.
 
 This is designed from the start to be Unsloth compatible.
 
-Weights are ternarized to `{-1, 0, 1}` per group of (128/64/user-defined) consecutive weights along the last dim, matching the Bonsai on-disk format (verified bit-exact). Embeddings + all `nn.Linear` modules (attn, MLP, lm_head) are ternarized; norms stay FP.
+Weights are ternarized to `{-1, 0, 1}` per group of (128/64/user-defined) consecutive weights along the last dim, matching the Bonsai on-disk format (verified: `w/alpha` rounds to `{-1,0,1}` in every group of all 310 tensors of the 1.7B unpacked checkpoint; ~0.002% of params sit within fp16-ULP noise of the grid, and re-ternarizing is idempotent). Embeddings + all `nn.Linear` modules (attn, MLP, lm_head) are ternarized; norms stay FP.
 
 Based on Prism-ML's whitepaper: https://github.com/PrismML-Eng/Bonsai-demo/blob/main/ternary-bonsai-8b-whitepaper.pdf
 

@@ -17,16 +17,19 @@ class TernaryEmbedding(nn.Embedding):
 
     def forward(self, x):
         # x is int64 indices; embedding is a gather, not a matmul — never cast
-        # weight to x.dtype (int64). Cast only if a float input slips through.
-        w_q = ternarize_weight(self.weight, self.group_size).to(x.dtype) \
-            if x.is_floating_point() else ternarize_weight(self.weight, self.group_size)
+        # weight to x.dtype. Output dtype follows weight dtype, exactly like
+        # vanilla nn.Embedding (a float x fails inside F.embedding with the
+        # standard Long/Int error, same as unswapped nn.Embedding).
+        w_q = ternarize_weight(self.weight, self.group_size)
         return torch.nn.functional.embedding(
             x, w_q, self.padding_idx, self.max_norm,
             self.norm_type, self.scale_grad_by_freq, self.sparse)
 
 
-# don't ternarize norms (tiny, paper keeps them FP).
-_EXCLUDE_SUBSTR = ("norm", "q_norm", "k_norm")
+# don't ternarize norms (tiny, paper keeps them FP). Matched as substrings of the
+# module path — these fragments never occur in Qwen *_proj / lm_head names, so
+# a Linear called e.g. `enormous_proj` still swaps (bare "norm" used to skip it).
+_EXCLUDE_SUBSTR = ("layernorm", "layer_norm", "rmsnorm", "q_norm", "k_norm")
 
 
 def _should_swap(name, mod):
@@ -101,7 +104,7 @@ def reternarize_merged_linears(model):
     back onto the g128 grid so the saved artifact is actually ternary."""
     n = 0
     for mod in model.modules():
-        if type(mod).__name__ in ("TernaryLinear", "TernaryEmbedding"):
+        if isinstance(mod, (TernaryLinear, TernaryEmbedding)):
             with torch.no_grad():
                 mod.weight.copy_(ternarize_weight(mod.weight, mod.group_size))
             n += 1

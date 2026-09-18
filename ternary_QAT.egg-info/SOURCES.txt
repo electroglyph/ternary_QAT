@@ -5,6 +5,7 @@ ternary/__init__.py
 ternary/linear.py
 ternary/ste.py
 ternary/swap.py
+ternary/test_smoke.py
 ternary_QAT.egg-info/PKG-INFO
 ternary_QAT.egg-info/SOURCES.txt
 ternary_QAT.egg-info/dependency_links.txt

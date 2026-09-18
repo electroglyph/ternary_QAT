@@ -1,0 +1,11 @@
+# bytecode / caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# local audit artifacts — proof logs, not shipped
+audit.md
+ternary/test_smoke.py
